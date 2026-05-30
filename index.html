@@ -1,0 +1,868 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CATV Manager — PSO v5</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f172a; --surface: #1e293b; --border: #334155;
+      --accent: #3b82f6; --danger: #ef4444; --success: #22c55e;
+      --warning: #f59e0b; --text: #f1f5f9; --muted: #94a3b8;
+    }
+    body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; min-height: 100vh; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 24px; display: flex; align-items: center; gap: 12px; }
+    header h1 { font-size: 1.2rem; font-weight: 700; }
+    header .tag { background: var(--accent); color: #fff; font-size: 0.7rem; padding: 2px 8px; border-radius: 999px; font-weight: 600; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px 16px; }
+    .layout { display: grid; grid-template-columns: 320px 1fr; gap: 18px; align-items: start; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px; }
+    .card + .card { margin-top: 14px; }
+    .card h2 { font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 14px; }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 3px; margin-top: 10px; }
+    input[type=text], input[type=number], input[type=password] {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+      border-radius: 6px; padding: 7px 10px; font-size: 0.88rem; outline: none;
+    }
+    input:focus { border-color: var(--accent); }
+    .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 14px; border-radius: 6px; border: none; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: opacity .15s; }
+    .btn:disabled { opacity: .4; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { opacity: .85; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-danger  { background: var(--danger); color: #fff; }
+    .btn-success { background: var(--success); color: #000; }
+    .btn-ghost   { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-sm      { padding: 4px 10px; font-size: 0.78rem; }
+    .row-btns    { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+    /* Badges */
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 700; }
+    .b-green   { background: #14532d; color: #86efac; }
+    .b-red     { background: #450a0a; color: #fca5a5; }
+    .b-yellow  { background: #451a03; color: #fcd34d; }
+    .b-blue    { background: #1e3a5f; color: #93c5fd; }
+    .b-gray    { background: #1e293b; color: var(--muted); }
+    .b-purple  { background: #3b0764; color: #d8b4fe; }
+
+    /* Stats cards */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center; }
+    .stat-card .num { font-size: 1.8rem; font-weight: 800; line-height: 1; }
+    .stat-card .lbl { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+    .stat-card.c-green  { border-color: #16a34a; }
+    .stat-card.c-red    { border-color: #dc2626; }
+    .stat-card.c-yellow { border-color: #d97706; }
+    .stat-card.c-purple { border-color: #7c3aed; }
+
+    /* Upload */
+    .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; transition: border-color .2s; margin-top: 10px; }
+    .upload-zone:hover { border-color: var(--accent); }
+    .upload-zone input { display: none; }
+    .upload-zone p { font-size: 0.82rem; color: var(--muted); margin-top: 4px; }
+
+    /* Alerts */
+    .alert { padding: 9px 12px; border-radius: 6px; font-size: 0.82rem; margin-top: 10px; }
+    .a-error   { background: #450a0a; border: 1px solid #7f1d1d; color: #fca5a5; }
+    .a-success { background: #14532d; border: 1px solid #166534; color: #86efac; }
+    .a-info    { background: #1e3a5f; border: 1px solid #1d4ed8; color: #93c5fd; }
+    .a-warning { background: #451a03; border: 1px solid #92400e; color: #fcd34d; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 16px; }
+    .tab { padding: 8px 16px; font-size: 0.85rem; font-weight: 600; border: none; background: none; color: var(--muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s; }
+    .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* Table */
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.83rem; }
+    thead th { text-align: left; padding: 7px 10px; color: var(--muted); border-bottom: 1px solid var(--border); font-size: 0.76rem; text-transform: uppercase; font-weight: 700; }
+    tbody tr { border-bottom: 1px solid #1e293b; }
+    tbody tr:hover { background: #1e2a3a; }
+    td { padding: 7px 10px; vertical-align: middle; }
+
+    /* Resultado masivo */
+    .result-section { margin-bottom: 16px; }
+    .result-header { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px 8px 0 0; font-weight: 700; font-size: 0.88rem; }
+    .result-body { border: 1px solid var(--border); border-top: none; border-radius: 0 0 8px 8px; }
+    .rh-green  { background: #14532d; color: #86efac; }
+    .rh-red    { background: #450a0a; color: #fca5a5; }
+    .rh-yellow { background: #451a03; color: #fcd34d; }
+    .rh-purple { background: #3b0764; color: #d8b4fe; }
+    .result-body table tbody tr:last-child { border-bottom: none; }
+
+    /* Progress */
+    .progress-bar { background: var(--border); border-radius: 999px; height: 6px; overflow: hidden; margin-top: 6px; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s; }
+
+    /* Filter bar */
+    .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+    .filter-bar input { flex: 1; min-width: 140px; }
+    select { background: var(--bg); border: 1px solid var(--border); color: var(--text); border-radius: 6px; padding: 6px 10px; font-size: 0.85rem; }
+
+    .chip { display: inline-block; background: #1d4ed820; border: 1px solid #3b82f680; color: #93c5fd; border-radius: 999px; padding: 2px 8px; font-size: 0.75rem; margin: 2px; }
+    .sep { height: 1px; background: var(--border); margin: 14px 0; }
+    #status-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border); display: inline-block; }
+    #status-dot.ok { background: var(--success); }
+    #status-dot.err { background: var(--danger); }
+
+    .modelo-sin-catv { color: var(--danger); font-size: 0.8rem; }
+    .empty-state { text-align: center; color: var(--muted); padding: 28px; font-size: 0.85rem; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M22 12H2M22 12l-4-4M22 12l-4 4"/></svg>
+  <h1>CATV Manager</h1>
+  <span class="tag">PSO v5</span>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px;">
+    <span id="status-dot"></span>
+    <span id="status-text" style="font-size:.8rem;color:var(--muted)">Sin conectar</span>
+  </div>
+</header>
+
+<div class="container">
+<div class="layout">
+
+  <!-- ── Columna izquierda ─────────────────── -->
+  <div>
+    <!-- Conexión -->
+    <div class="card">
+      <h2>🔌 Conexión PSO</h2>
+      <label>IP / Host</label>
+      <input id="psoHost" type="text" placeholder="192.168.1.100" />
+      <label>Puerto</label>
+      <input id="psoPort" type="number" placeholder="80" value="80" />
+      <label>Usuario</label>
+      <input id="psoUser" type="text" placeholder="admin" />
+      <label>Contraseña</label>
+      <input id="psoPwd" type="password" placeholder="••••••••" />
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+        <span>Frame / OLT</span>
+        <label style="margin:0;display:flex;align-items:center;gap:5px;font-size:0.78rem;color:var(--accent);cursor:pointer;">
+          <input type="checkbox" id="allFrames" onchange="toggleFrame()" style="width:auto;cursor:pointer;" />
+          Todos los frames
+        </label>
+      </label>
+      <input id="psoFrame" type="number" placeholder="0" value="0" />
+      <label style="margin-top:10px">Ruta endpoint <span style="color:var(--muted);font-weight:400">(avanzado)</span></label>
+      <input id="psoPath" type="text" placeholder="/php/manejador.php" value="/php/manejador.php" title="Cambiar solo si el servidor PSO usa una ruta distinta" />
+      <div class="row-btns">
+        <button class="btn btn-primary" onclick="testConexion()">Probar</button>
+        <button class="btn btn-ghost" onclick="cargarDatos()">⟳ Cargar todo</button>
+      </div>
+      <div id="alert-conn"></div>
+    </div>
+
+    <!-- Excel -->
+    <div class="card">
+      <h2>📂 Archivo Excel</h2>
+      <p style="font-size:.79rem;color:var(--muted)">Columna requerida: <code style="background:#0f172a;padding:1px 5px;border-radius:3px;font-size:.82rem">idexterno</code></p>
+      <label class="upload-zone" id="upload-label">
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" onchange="subirExcel()" />
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--muted)"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <p>Clic o arrastra un Excel</p>
+        <p id="file-name" style="color:var(--accent);font-size:.82rem;margin-top:4px;"></p>
+      </label>
+      <div id="alert-excel"></div>
+      <div id="ids-chips" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Modelos sin CATV -->
+    <div class="card">
+      <h2>🔭 Modelos sin CATV</h2>
+      <p style="font-size:.79rem;color:var(--muted);margin-bottom:8px">Modelos detectados como "Solo Internet" (sin puerto CATV físico).</p>
+      <div id="modelos-list"><span style="color:var(--muted);font-size:.82rem">Carga datos para ver modelos</span></div>
+    </div>
+
+    <!-- Acción masiva -->
+    <div class="card">
+      <h2>⚡ Acción masiva</h2>
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:12px">Procesa todos los IDs del Excel y clasifica los resultados.</p>
+      <div class="row-btns">
+        <button class="btn btn-danger"  id="btn-cortar"  onclick="accionMasiva(0)">✂ Cortar CATV</button>
+        <button class="btn btn-success" id="btn-activar" onclick="accionMasiva(1)">▶ Activar CATV</button>
+      </div>
+      <div id="progreso" style="display:none;margin-top:10px;">
+        <div id="prog-label" style="font-size:.8rem;color:var(--muted)">Procesando...</div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      </div>
+      <div id="alert-accion"></div>
+    </div>
+  </div>
+
+  <!-- ── Columna derecha ───────────────────── -->
+  <div>
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card"><div class="num" id="st-total">—</div><div class="lbl">Total ONTs OLT</div></div>
+      <div class="stat-card c-green"><div class="num" style="color:var(--success)" id="st-exitosos">—</div><div class="lbl">✓ Corte exitoso</div></div>
+      <div class="stat-card c-red"><div class="num" style="color:var(--danger)" id="st-noencontrados">—</div><div class="lbl">✗ No encontrados</div></div>
+      <div class="stat-card c-yellow"><div class="num" style="color:var(--warning)" id="st-internet">—</div><div class="lbl">🌐 Solo Internet</div></div>
+    </div>
+
+    <!-- Tabs principales -->
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('tab-onts', this)">📡 ONTs OLT</button>
+        <button class="tab" onclick="switchTab('tab-resultado', this)">📋 Resultado corte</button>
+      </div>
+
+      <!-- Tab: ONTs -->
+      <div id="tab-onts" class="tab-panel active">
+        <div class="filter-bar">
+          <input id="search" type="text" placeholder="Buscar descripción, nombre, SN..." oninput="filtrar()" />
+          <select id="f-catv" onchange="filtrar()">
+            <option value="">CATV: todos</option>
+            <option value="1">CATV activo</option>
+            <option value="0">CATV cortado</option>
+          </select>
+          <select id="f-match" onchange="filtrar()">
+            <option value="">Mostrar: todos</option>
+            <option value="match">En Excel</option>
+            <option value="nomatch">No en Excel</option>
+          </select>
+          <select id="f-capac" onchange="filtrar()">
+            <option value="">Capacidad: todas</option>
+            <option value="concatv">Con CATV</option>
+            <option value="sincatv">Sin CATV (solo internet)</option>
+          </select>
+          <button class="btn btn-ghost btn-sm" onclick="exportarCSV()">⬇ CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Descripción</th>
+                <th>Nombre Cliente</th>
+                <th>SN</th>
+                <th>Modelo</th>
+                <th>Frame</th>
+                <th>Tarjeta</th>
+                <th>Puerto</th>
+                <th>ID</th>
+                <th>Estado óptico</th>
+                <th>CATV</th>
+                <th>Capacidad</th>
+                <th>En Excel</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-onts">
+              <tr><td colspan="13" class="empty-state">Carga las ONTs para comenzar</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div id="pag" style="display:flex;gap:6px;margin-top:10px;align-items:center;font-size:.8rem;color:var(--muted);flex-wrap:wrap;"></div>
+      </div>
+
+      <!-- Tab: Resultado -->
+      <div id="tab-resultado" class="tab-panel">
+        <div id="resultado-vacio" class="empty-state">Ejecuta una acción masiva para ver los resultados aquí.</div>
+        <div id="resultado-contenido" style="display:none;">
+
+          <!-- Resumen numérico -->
+          <div class="stats-grid" id="res-stats" style="margin-bottom:12px;"></div>
+
+          <!-- Exportar Excel completo -->
+          <div style="margin-bottom:14px;text-align:right;">
+            <button class="btn btn-success" onclick="exportarExcelCompleto()">⬇ Exportar Excel completo</button>
+          </div>
+
+          <!-- Exitosos -->
+          <div class="result-section" id="sec-exitosos">
+            <div class="result-header rh-green">
+              <span>✓</span><span id="tit-exitosos">Corte exitoso — 0</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportarSeccion('exitosos')">⬇ CSV</button>
+            </div>
+            <div class="result-body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>idexterno</th><th>Descripción PSO</th><th>SN</th><th>Modelo</th></tr></thead>
+                  <tbody id="tb-exitosos"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- No encontrados -->
+          <div class="result-section" id="sec-noencontrados" style="margin-top:12px;">
+            <div class="result-header rh-red">
+              <span>✗</span><span id="tit-noenc">No encontrados en PSO — 0</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportarSeccion('no_encontrados')">⬇ CSV</button>
+            </div>
+            <div class="result-body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>idexterno (Excel)</th><th>Motivo</th></tr></thead>
+                  <tbody id="tb-noenc"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Solo internet -->
+          <div class="result-section" id="sec-internet" style="margin-top:12px;">
+            <div class="result-header rh-yellow">
+              <span>🌐</span><span id="tit-internet">Solo Internet (sin CATV físico) — 0</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportarSeccion('solo_internet')">⬇ CSV</button>
+            </div>
+            <div class="result-body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>idexterno</th><th>Descripción PSO</th><th>SN</th><th>Modelo</th></tr></thead>
+                  <tbody id="tb-internet"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ya apagada/activada -->
+          <div class="result-section" id="sec-yaapagada" style="margin-top:12px;">
+            <div class="result-header" style="background:#0c2a2a;border:1px solid #134e4a;">
+              <span>💤</span><span id="tit-yaapagada">CATV ya apagada — 0</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportarSeccion('ya_aplicada')">⬇ CSV</button>
+            </div>
+            <div class="result-body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>idexterno</th><th>Descripción PSO</th><th>SN</th><th>Modelo</th></tr></thead>
+                  <tbody id="tb-yaapagada"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Errores -->
+          <div class="result-section" id="sec-errores" style="margin-top:12px;">
+            <div class="result-header rh-purple">
+              <span>⚠</span><span id="tit-errores">Errores — 0</span>
+              <button class="btn btn-ghost btn-sm" style="margin-left:auto" onclick="exportarSeccion('errores')">⬇ CSV</button>
+            </div>
+            <div class="result-body">
+              <div class="table-wrap">
+                <table>
+                  <thead><tr><th>idexterno</th><th>SN</th><th>Modelo</th><th>Error</th></tr></thead>
+                  <tbody id="tb-errores"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const API = 'http://localhost:3001/api';
+
+let todosLosONTs = [];
+let idsExcel = [];
+let idsExcelSet = new Set();
+let modelosSinCatv = new Set();   // nombres en minúscula de modelos sin catv
+let modelosSinCatvArr = [];       // para enviar al backend
+let paginaActual = 1;
+const POR_PAG = 50;
+let filtradas = [];
+let ultimoResultado = null;
+let ultimaAccion = 0;
+
+// ── Config localStorage ──────────────────────────────────────────────────────
+function getConfig() {
+  const host = document.getElementById('psoHost').value.trim();
+  const port = document.getElementById('psoPort').value.trim() || '80';
+  const path = document.getElementById('psoPath').value.trim() || '/php/manejador.php';
+  const base = port === '80' ? `http://${host}` : `http://${host}:${port}`;
+  // Construir baseUrl incluyendo la ruta para que el backend la use directamente
+  const baseUrl = base + path;
+  return {
+    baseUrl,
+    user: document.getElementById('psoUser').value.trim(),
+    password: document.getElementById('psoPwd').value.trim(),
+    frame: document.getElementById('psoFrame').value.trim() || '0',
+  };
+}
+
+['psoHost','psoPort','psoUser','psoFrame'].forEach(id => {
+  const el = document.getElementById(id);
+  const saved = JSON.parse(localStorage.getItem('catv-cfg') || '{}');
+  if (saved[id]) el.value = saved[id];
+  el.addEventListener('change', () => {
+    const cfg = {};
+    ['psoHost','psoPort','psoUser','psoFrame'].forEach(k => cfg[k] = document.getElementById(k).value);
+    localStorage.setItem('catv-cfg', JSON.stringify(cfg));
+  });
+});
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+function switchTab(panelId, btn) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── Conexión ─────────────────────────────────────────────────────────────────
+async function testConexion() {
+  const cfg = getConfig();
+  setAlert('alert-conn', 'info', 'Probando variantes de ruta...');
+  try {
+    const r = await post('/api/test', cfg);
+
+    if (r.ok) {
+      // Actualizar el campo de ruta con la URL que funcionó
+      const urlObj = new URL(r.url);
+      document.getElementById('psoPath').value = urlObj.pathname;
+      setAlert('alert-conn', 'success',
+        `✓ Conexión exitosa<br><small>URL: <code>${r.url}</code></small>`);
+      setStatus(true);
+
+    } else if (r.status === 401 || r.status === 403) {
+      const urlObj = new URL(r.url);
+      document.getElementById('psoPath').value = urlObj.pathname;
+      setAlert('alert-conn', 'warning',
+        `⚠ Servidor encontrado pero credenciales incorrectas (HTTP ${r.status})<br>
+         <small>URL: <code>${r.url}</code> — Verifica usuario y contraseña</small>`);
+      setStatus(false);
+
+    } else if (r.resultados) {
+      // Ninguna variante funcionó — mostrar tabla diagnóstico
+      const filas = r.resultados.map(x =>
+        `<tr><td style="font-family:monospace;font-size:.75rem">${x.url}</td><td>${x.status}</td></tr>`
+      ).join('');
+      setAlert('alert-conn', 'error',
+        `<strong>Ninguna ruta respondió correctamente</strong><br>
+         <table style="margin-top:6px;font-size:.78rem;width:100%;border-collapse:collapse">
+           <tr><th style="text-align:left;color:var(--muted)">URL probada</th><th style="color:var(--muted)">Status</th></tr>
+           ${filas}
+         </table>
+         <small style="margin-top:6px;display:block">💡 Verifica que la IP y el puerto sean correctos y que PSO esté en ejecución</small>`);
+      setStatus(false);
+
+    } else {
+      setAlert('alert-conn', 'error', r.error || 'Error desconocido');
+      setStatus(false);
+    }
+  } catch (e) {
+    setAlert('alert-conn', 'error', 'Backend no disponible — ¿está corriendo <code>node server.js</code> en puerto 3001?');
+    setStatus(false);
+  }
+}
+
+async function cargarDatos() {
+  await cargarONTs();
+  await cargarModelos();
+}
+
+function toggleFrame() {
+  const all = document.getElementById('allFrames').checked;
+  document.getElementById('psoFrame').disabled = all;
+  document.getElementById('psoFrame').style.opacity = all ? '0.35' : '1';
+}
+
+async function cargarONTs() {
+  const cfg = getConfig();
+  const todosFrames = document.getElementById('allFrames').checked;
+  const endpoint = todosFrames ? '/api/onts/all' : '/api/onts';
+  const label = todosFrames ? 'todos los frames' : `frame ${cfg.frame}`;
+  setAlert('alert-conn', 'info', `Cargando ONTs de ${label}...`);
+  try {
+    const r = await post(endpoint, cfg);
+    todosLosONTs = r.onts || [];
+    setAlert('alert-conn', 'success', `✓ ${todosLosONTs.length} ONTs cargadas (${label})`);
+    setStatus(true);
+    renderTabla();
+    updateStats();
+  } catch (e) { setAlert('alert-conn', 'error', e.message); }
+}
+
+async function cargarModelos() {
+  const cfg = getConfig();
+  try {
+    const r = await post('/api/modelos', cfg);
+    if (r.error || !r.modelos) return;
+
+    modelosSinCatv = new Set(r.modelos.filter(m => m.has_catv === 0).map(m => m.name.toLowerCase()));
+    modelosSinCatvArr = r.modelos.filter(m => m.has_catv === 0).map(m => ({ name: m.name }));
+
+    const el = document.getElementById('modelos-list');
+    if (r.modelos.length === 0) { el.innerHTML = '<span style="color:var(--muted);font-size:.82rem">Sin modelos registrados</span>'; return; }
+
+    el.innerHTML = r.modelos.map(m => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #1e293b;font-size:.82rem;">
+        <span>${esc(m.name)} <span style="color:var(--muted);font-size:.75rem">${m.alias ? '('+m.alias+')' : ''}</span></span>
+        ${m.has_catv ? '<span class="badge b-green">CATV ✓</span>' : '<span class="badge b-red">Solo Internet</span>'}
+      </div>`).join('');
+
+    renderTabla();
+  } catch (e) { /* silencioso */ }
+}
+
+// ── Excel ────────────────────────────────────────────────────────────────────
+async function subirExcel() {
+  const file = document.getElementById('fileInput').files[0];
+  if (!file) return;
+  document.getElementById('file-name').textContent = file.name;
+  const form = new FormData();
+  form.append('file', file);
+  try {
+    const res = await fetch(`${API}/excel/leer`, { method: 'POST', body: form });
+    const r = await res.json();
+    if (r.error) return setAlert('alert-excel', 'error', r.error);
+    idsExcel = r.ids;
+    idsExcelSet = new Set(r.ids.map(id => String(id).trim()));
+    setAlert('alert-excel', 'success', `✓ ${r.total} IDs cargados`);
+    const chips = r.ids.slice(0, 8).map(id => `<span class="chip">${esc(id)}</span>`).join('') +
+      (r.ids.length > 8 ? `<span class="chip">+${r.ids.length - 8}</span>` : '');
+    document.getElementById('ids-chips').innerHTML = chips;
+    renderTabla();
+    updateStats();
+  } catch (e) { setAlert('alert-excel', 'error', e.message); }
+}
+
+// ── ONT helpers ──────────────────────────────────────────────────────────────
+function getSN(ont)       { return ont?.ont_tr069?.sn || ont?.sn || ''; }
+function enExcel(ont)     { return idsExcelSet.has(String(ont.description || '').trim()); }
+function tieneCatv(ont)   { return !modelosSinCatv.has(String(ont.model_name || '').toLowerCase()); }
+
+// ── Tabla ONTs ───────────────────────────────────────────────────────────────
+function filtrar() {
+  const q      = document.getElementById('search').value.toLowerCase();
+  const fCatv  = document.getElementById('f-catv').value;
+  const fMatch = document.getElementById('f-match').value;
+  const fCap   = document.getElementById('f-capac').value;
+
+  filtradas = todosLosONTs.filter(o => {
+    const sn   = getSN(o).toLowerCase();
+    const desc = String(o.description || '').toLowerCase();
+    const name = String(o.name || '').toLowerCase();
+    const mq   = !q || desc.includes(q) || name.includes(q) || sn.includes(q);
+    const mc   = fCatv === '' || String(o.activate_catv) === fCatv;
+    const inEx = enExcel(o);
+    const mm   = fMatch === '' || (fMatch === 'match' && inEx) || (fMatch === 'nomatch' && !inEx);
+    const hc   = tieneCatv(o);
+    const mcp  = fCap === '' || (fCap === 'concatv' && hc) || (fCap === 'sincatv' && !hc);
+    return mq && mc && mm && mcp;
+  });
+
+  paginaActual = 1;
+  renderFilas();
+}
+
+function renderTabla() { filtrar(); }
+
+function renderFilas() {
+  const ini   = (paginaActual - 1) * POR_PAG;
+  const pag   = filtradas.slice(ini, ini + POR_PAG);
+  const tbody = document.getElementById('tbody-onts');
+
+  if (pag.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="13" class="empty-state">${todosLosONTs.length === 0 ? 'Sin ONTs cargadas' : 'Sin resultados'}</td></tr>`;
+    document.getElementById('pag').innerHTML = '';
+    return;
+  }
+
+  tbody.innerHTML = pag.map(o => {
+    const sn      = getSN(o);
+    const catv    = Number(o.activate_catv);
+    const online  = o.optic_state === 'online';
+    const inEx    = enExcel(o);
+    const hasCatv = tieneCatv(o);
+    return `<tr>
+      <td><strong>${esc(o.description || '—')}</strong></td>
+      <td style="font-size:.78rem;color:var(--muted)">${esc(o.name || '—')}</td>
+      <td style="font-family:monospace;font-size:.75rem;color:var(--muted)">${sn}</td>
+      <td style="font-size:.8rem">${esc(o.model_name || '')}</td>
+      <td style="text-align:center;font-size:.8rem">${o.frame ?? '—'}</td>
+      <td style="text-align:center;font-size:.8rem">${o.slot  ?? '—'}</td>
+      <td style="text-align:center;font-size:.8rem">${o.port  ?? '—'}</td>
+      <td style="text-align:center;font-size:.8rem;color:var(--muted)">${o.id_index || '—'}</td>
+      <td><span class="badge ${online ? 'b-green' : 'b-gray'}">${o.optic_state || 'offline'}</span></td>
+      <td><span class="badge ${catv ? 'b-green' : 'b-red'}">${catv ? 'ACTIVO' : 'CORTADO'}</span></td>
+      <td>${hasCatv ? '<span class="badge b-blue">Con CATV</span>' : '<span class="badge b-yellow">Solo Internet</span>'}</td>
+      <td>${inEx ? '<span class="badge b-blue">✓</span>' : '<span style="color:var(--muted)">—</span>'}</td>
+      <td>
+        ${hasCatv
+          ? (catv
+              ? `<button class="btn btn-danger btn-sm" onclick='accionIndividual(${JSON.stringify(o)}, 0)'>✂ Cortar</button>`
+              : `<button class="btn btn-success btn-sm" onclick='accionIndividual(${JSON.stringify(o)}, 1)'>▶ Activar</button>`)
+          : '<span style="font-size:.75rem;color:var(--muted)">Sin CATV</span>'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  renderPag();
+  updateStats();
+}
+
+function renderPag() {
+  const tot  = filtradas.length;
+  const tpag = Math.ceil(tot / POR_PAG);
+  const el   = document.getElementById('pag');
+  if (tpag <= 1) { el.innerHTML = `<span>${tot} registros</span>`; return; }
+  let h = `<span>${tot} registros &nbsp;</span>`;
+  if (paginaActual > 1) h += `<button class="btn btn-ghost btn-sm" onclick="irPag(${paginaActual-1})">‹</button>`;
+  h += `<span style="padding:0 8px">Pág ${paginaActual}/${tpag}</span>`;
+  if (paginaActual < tpag) h += `<button class="btn btn-ghost btn-sm" onclick="irPag(${paginaActual+1})">›</button>`;
+  el.innerHTML = h;
+}
+function irPag(n) { paginaActual = n; renderFilas(); }
+
+function updateStats() {
+  document.getElementById('st-total').textContent = todosLosONTs.length || '—';
+  if (ultimoResultado) {
+    document.getElementById('st-exitosos').textContent      = ultimoResultado.resumen.exitosos;
+    document.getElementById('st-noencontrados').textContent = ultimoResultado.resumen.no_encontrados;
+    document.getElementById('st-internet').textContent      = ultimoResultado.resumen.solo_internet;
+  } else {
+    document.getElementById('st-exitosos').textContent      = '—';
+    document.getElementById('st-noencontrados').textContent = '—';
+    document.getElementById('st-internet').textContent      = '—';
+  }
+}
+
+// ── Acción individual ────────────────────────────────────────────────────────
+async function accionIndividual(ont, activar) {
+  const sn   = getSN(ont);
+  const desc = ont.description || sn;
+  if (!confirm(`¿${activar ? 'ACTIVAR' : 'CORTAR'} CATV para "${desc}"?`)) return;
+  const cfg = getConfig();
+  try {
+    const r = await post('/api/catv/modificar', { ...cfg, sn, frame: ont.frame ?? cfg.frame, activate_catv: activar, ontData: ont });
+    if (r.ok) {
+      const idx = todosLosONTs.findIndex(o => getSN(o) === sn);
+      if (idx >= 0) todosLosONTs[idx].activate_catv = activar;
+      renderTabla();
+      setAlert('alert-accion', 'success', `✓ CATV ${activar ? 'activado' : 'cortado'} para "${desc}"`);
+    } else {
+      setAlert('alert-accion', 'error', 'Error: ' + r.error);
+    }
+  } catch (e) { setAlert('alert-accion', 'error', e.message); }
+}
+
+// ── Acción masiva ────────────────────────────────────────────────────────────
+async function accionMasiva(activar) {
+  if (idsExcel.length === 0)     return setAlert('alert-accion', 'error', 'Primero carga el archivo Excel.');
+  if (todosLosONTs.length === 0) return setAlert('alert-accion', 'error', 'Primero carga las ONTs.');
+
+  const accion = activar ? 'ACTIVAR' : 'CORTAR';
+  if (!confirm(`¿${accion} CATV para ${idsExcel.length} IDs del Excel?\n\nSe clasificarán en: exitosos, no encontrados, solo internet y errores.`)) return;
+
+  const cfg = getConfig();
+  setBtns(true);
+  document.getElementById('progreso').style.display = 'block';
+  document.getElementById('prog-fill').style.width = '30%';
+  document.getElementById('prog-label').textContent = 'Procesando en el servidor...';
+  setAlert('alert-accion', 'info', 'Enviando solicitud al servidor...');
+
+  try {
+    const r = await post('/api/catv/masivo', {
+      ...cfg,
+      idsExcel,
+      activate_catv: activar,
+    });
+
+    document.getElementById('prog-fill').style.width = '100%';
+    document.getElementById('prog-label').textContent = 'Completado';
+
+    ultimoResultado = r;
+    ultimaAccion = activar;
+    renderResultado(r, activar);
+    updateStats();
+
+    // Actualizar activate_catv en memoria para los exitosos
+    r.exitosos.forEach(ex => {
+      const idx = todosLosONTs.findIndex(o => String(o.description || '').trim() === ex.idExterno);
+      if (idx >= 0) todosLosONTs[idx].activate_catv = activar;
+    });
+    renderTabla();
+
+    const msg = `Completado: ${r.resumen.exitosos} exitosos · ${r.resumen.no_encontrados} no encontrados · ${r.resumen.solo_internet} solo internet · ${r.resumen.ya_aplicada || 0} ya apagados · ${r.resumen.errores} errores`;
+    setAlert('alert-accion', r.resumen.errores > 0 ? 'warning' : 'success', msg);
+
+    // Cambiar a tab resultado
+    switchTab('tab-resultado', document.querySelectorAll('.tab')[1]);
+  } catch (e) {
+    setAlert('alert-accion', 'error', e.message);
+  } finally {
+    setBtns(false);
+  }
+}
+
+function renderResultado(r, activar) {
+  document.getElementById('resultado-vacio').style.display = 'none';
+  document.getElementById('resultado-contenido').style.display = 'block';
+
+  const accion = activar ? 'Activación' : 'Corte';
+
+  const yaLabel = activar ? 'CATV ya activada' : 'CATV ya apagada';
+
+  // Stats rápidas
+  document.getElementById('res-stats').innerHTML = `
+    <div class="stat-card c-green"><div class="num" style="color:var(--success)">${r.resumen.exitosos}</div><div class="lbl">✓ ${accion} exitoso</div></div>
+    <div class="stat-card c-red"><div class="num" style="color:var(--danger)">${r.resumen.no_encontrados}</div><div class="lbl">✗ No encontrados</div></div>
+    <div class="stat-card c-yellow"><div class="num" style="color:var(--warning)">${r.resumen.solo_internet}</div><div class="lbl">🌐 Solo Internet</div></div>
+    <div class="stat-card" style="border-color:#134e4a"><div class="num" style="color:#2dd4bf">${r.resumen.ya_aplicada || 0}</div><div class="lbl">💤 ${yaLabel}</div></div>
+    <div class="stat-card c-purple"><div class="num" style="color:#c084fc">${r.resumen.errores}</div><div class="lbl">⚠ Errores</div></div>
+  `;
+
+  document.getElementById('tit-exitosos').textContent  = `${accion} exitoso — ${r.resumen.exitosos}`;
+  document.getElementById('tit-noenc').textContent     = `No encontrados en PSO — ${r.resumen.no_encontrados}`;
+  document.getElementById('tit-internet').textContent  = `Solo Internet (sin CATV físico) — ${r.resumen.solo_internet}`;
+  document.getElementById('tit-yaapagada').textContent = `${yaLabel} — ${r.resumen.ya_aplicada || 0}`;
+  document.getElementById('tit-errores').textContent   = `Errores de API — ${r.resumen.errores}`;
+
+  document.getElementById('tb-exitosos').innerHTML = r.exitosos.length === 0
+    ? '<tr><td colspan="4" class="empty-state">Sin registros</td></tr>'
+    : r.exitosos.map(x => `<tr><td>${esc(x.idExterno)}</td><td>${esc(x.description||'')}</td><td style="font-family:monospace;font-size:.78rem">${x.sn}</td><td>${esc(x.model_name||'')}</td></tr>`).join('');
+
+  document.getElementById('tb-noenc').innerHTML = r.no_encontrados.length === 0
+    ? '<tr><td colspan="2" class="empty-state">Sin registros</td></tr>'
+    : r.no_encontrados.map(x => `<tr><td>${esc(x.idExterno)}</td><td style="color:var(--muted);font-size:.8rem">No existe ninguna ONT con este ID en la OLT</td></tr>`).join('');
+
+  document.getElementById('tb-internet').innerHTML = r.solo_internet.length === 0
+    ? '<tr><td colspan="4" class="empty-state">Sin registros</td></tr>'
+    : r.solo_internet.map(x => `<tr><td>${esc(x.idExterno)}</td><td>${esc(x.description||'')}</td><td style="font-family:monospace;font-size:.78rem">${x.sn}</td><td>${esc(x.model_name||'')} <span class="badge b-yellow">Sin CATV</span></td></tr>`).join('');
+
+  document.getElementById('tb-yaapagada').innerHTML = (r.ya_aplicada || []).length === 0
+    ? '<tr><td colspan="4" class="empty-state">Sin registros</td></tr>'
+    : r.ya_aplicada.map(x => `<tr><td>${esc(x.idExterno)}</td><td>${esc(x.description||'')}</td><td style="font-family:monospace;font-size:.78rem">${x.sn}</td><td>${esc(x.model_name||'')}</td></tr>`).join('');
+
+  document.getElementById('tb-errores').innerHTML = r.errores.length === 0
+    ? '<tr><td colspan="4" class="empty-state">Sin registros</td></tr>'
+    : r.errores.map(x => `<tr><td>${esc(x.idExterno)}</td><td style="font-family:monospace;font-size:.78rem">${x.sn}</td><td>${esc(x.model_name||'')}</td><td style="color:var(--danger);font-size:.78rem">${esc(x.error||'')}</td></tr>`).join('');
+}
+
+// ── Export ───────────────────────────────────────────────────────────────────
+function exportarCSV() {
+  if (todosLosONTs.length === 0) return;
+  const rows = ['Descripcion,SN,Modelo,Estado,CATV,CapacidadCatv,EnExcel'];
+  todosLosONTs.forEach(o => {
+    rows.push([
+      `"${o.description||''}"`,
+      getSN(o),
+      `"${o.model_name||''}"`,
+      o.optic_state || '',
+      Number(o.activate_catv) ? 'ACTIVO' : 'CORTADO',
+      tieneCatv(o) ? 'ConCatv' : 'SoloInternet',
+      enExcel(o) ? 'SI' : 'NO',
+    ].join(','));
+  });
+  descargar(rows.join('\n'), `onts-${hoy()}.csv`);
+}
+
+async function exportarExcelCompleto() {
+  if (!ultimoResultado) return;
+  try {
+    const res = await fetch('http://localhost:3001/api/export/excel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        accion: String(ultimaAccion),
+        exitosos:       ultimoResultado.exitosos       || [],
+        no_encontrados: ultimoResultado.no_encontrados || [],
+        solo_internet:  ultimoResultado.solo_internet  || [],
+        ya_aplicada:    ultimoResultado.ya_aplicada    || [],
+        errores:        ultimoResultado.errores         || [],
+      }),
+    });
+    if (!res.ok) { alert('Error al generar Excel: ' + res.status); return; }
+    const blob = await res.blob();
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const cd   = res.headers.get('Content-Disposition') || '';
+    const fname = cd.match(/filename="(.+?)"/)?.[1] || `catv_resultados_${hoy()}.xlsx`;
+    a.href = url; a.download = fname;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch(e) {
+    alert('Error al descargar Excel: ' + e.message);
+  }
+}
+
+function exportarSeccion(key) {
+  if (!ultimoResultado) return;
+  const items = ultimoResultado[key] || [];
+  const headers = { exitosos: 'idExterno,Descripcion,SN,Modelo', no_encontrados: 'idExterno,Motivo', solo_internet: 'idExterno,Descripcion,SN,Modelo', errores: 'idExterno,SN,Modelo,Error' };
+  let rows = [headers[key]];
+  items.forEach(x => {
+    if (key === 'no_encontrados') rows.push(`"${x.idExterno}","No encontrado en PSO"`);
+    else if (key === 'errores')   rows.push(`"${x.idExterno}","${x.sn}","${x.model_name||''}","${x.error||''}"`);
+    else                          rows.push(`"${x.idExterno}","${x.description||''}","${x.sn}","${x.model_name||''}"`);
+  });
+  descargar(rows.join('\n'), `${key}-${hoy()}.csv`);
+}
+
+function descargar(csv, nombre) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+  a.download = nombre;
+  a.click();
+}
+
+// ── Utils ────────────────────────────────────────────────────────────────────
+async function post(path, body) {
+  const url = path.startsWith('http') ? path : `${API}${path.replace(/^\/api/, '')}`;
+  let r;
+  try {
+    r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) {
+    throw new Error(`No se pudo conectar al backend — ¿está corriendo el servidor? (${e.message})`);
+  }
+  let data;
+  try {
+    data = await r.json();
+  } catch (_) {
+    throw new Error(`El servidor devolvió respuesta inválida (HTTP ${r.status}). Revisa la ventana del servidor.`);
+  }
+  if (!r.ok) throw new Error(data.error || `Error HTTP ${r.status}`);
+  return data;
+}
+
+function setAlert(id, type, msg) {
+  const el = document.getElementById(id);
+  if (!msg || !type) { el.innerHTML = ''; return; }
+  const cls = { error:'a-error', success:'a-success', info:'a-info', warning:'a-warning' }[type] || '';
+  el.innerHTML = `<div class="alert ${cls}">${msg}</div>`;
+}
+
+function setStatus(ok) {
+  document.getElementById('status-dot').className = ok ? 'ok' : 'err';
+  document.getElementById('status-text').textContent = ok ? 'Conectado' : 'Error';
+}
+
+function setBtns(disabled) {
+  document.getElementById('btn-cortar').disabled = disabled;
+  document.getElementById('btn-activar').disabled = disabled;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function hoy() { return new Date().toISOString().slice(0,10); }
+
+// Drag & drop
+const uz = document.getElementById('upload-label');
+['dragenter','dragover'].forEach(e => uz.addEventListener(e, ev => { ev.preventDefault(); uz.style.borderColor='var(--accent)'; }));
+['dragleave','drop'].forEach(e => uz.addEventListener(e, ev => { ev.preventDefault(); uz.style.borderColor='var(--border)'; }));
+uz.addEventListener('drop', ev => {
+  const f = ev.dataTransfer?.files?.[0];
+  if (f) { document.getElementById('fileInput').files = ev.dataTransfer.files; subirExcel(); }
+});
+</script>
+</body>
+</html>
